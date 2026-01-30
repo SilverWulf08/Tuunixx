@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 70" width="70" height="70">
+  <circle cx="35" cy="35" r="32" fill="#232b36" stroke="#8fd6ff" stroke-width="3"/>
+  <circle cx="35" cy="35" r="16" fill="#3bb0ff"/>
+  <circle cx="35" cy="35" r="6" fill="#fff"/>
+  <polygon points="28,20 52,35 28,50" fill="#fff" style="filter: drop-shadow(0 0 2px #3bb0ff88); stroke-linejoin:round;"/>
+</svg>

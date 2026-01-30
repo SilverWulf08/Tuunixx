@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tuunixx</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="top-bar">
+    <button class="export-btn" id="export-btn">Export MP3</button>
+    <div class="topbar-track-slider">
+      <button class="playback-mode-toggle" id="playback-mode-toggle" title="Change playback mode">
+        <span id="playback-mode-icon">&#9654;&#9654;</span>
+      </button>
+      <input type="range" min="0" max="100" value="0" class="audio-progress-slider" id="audio-progress-slider">
+      <span class="audio-time" id="audio-current">0:00</span> / <span class="audio-time" id="audio-duration">0:00</span>
+    </div>
+    <div class="topbar-volume-slider">
+      <label>Volume
+        <input type="range" min="0" max="1" value="1" step="0.01" class="volume-slider" id="volume-slider">
+      </label>
+      <button class="track-panel-toggle" id="track-panel-toggle" title="Show/Hide track list">
+        <span id="track-panel-chevron">&#x25B2;</span>
+      </button>
+    </div>
+  </div>
+  <div class="container">
+    <h1>Tuunixx</h1>
+      <!-- Track panel will be a sliding panel at the bottom, toggled by a chevron button -->
+      <div class="track-panel" id="track-panel">
+        <div class="track-panel-inner">
+          <div class="track-dropdown" id="track-dropdown">
+            <!-- Tracks will be dynamically inserted here -->
+          </div>
+        </div>
+      </div>
+      <div class="lp-player">
+        <div class="lp-record" id="lp-record" tabindex="0" aria-label="Play/Pause">
+          <div class="lp-rotator" id="lp-rotator">
+            <div class="lp-grooves"></div>
+            <div class="lp-label"></div>
+            <div class="lp-spindle"></div>
+            <span id="lp-play-icon" class="lp-play-icon">&#9654;</span>
+          </div>
+        </div>
+        <div class="music-notes" id="music-notes"></div>
+        <div class="file-upload-wrapper">
+          <label for="file-input" class="file-label">
+            <span class="file-btn"><span class="file-btn-text">Browse<br>Folder</span></span>
+            <span class="file-name" id="file-name">No folder chosen</span>
+            <input type="file" id="file-input" accept="audio/mp3" webkitdirectory directory multiple />
+          </label>
+        </div>
+        <!-- Sliders moved to top bar -->
+        <audio id="audio-player" style="display:none;"></audio>
+      </div>
+    <canvas id="visualizer"></canvas>
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+</html>
