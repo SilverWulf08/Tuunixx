@@ -19,39 +19,58 @@ const fileNameSpan = document.getElementById('file-name');
 const lpRotator = document.getElementById('lp-rotator');
 const exportBtn = document.getElementById('export-btn');
 
-function updateTrackPanelToggleState() {
-  if (!trackPanelToggle) return;
-  trackPanelToggle.disabled = !(importedFiles && importedFiles.length > 0);
+// Searchbar elements
+const searchbar = document.getElementById('searchbar');
+const searchbarDropdown = document.getElementById('searchbar-dropdown');
+
+
+function updateSearchbarState() {
+  if (!searchbar) return;
+  searchbar.disabled = !(importedFiles && importedFiles.length > 0);
+  if (searchbar.disabled) {
+    searchbar.value = '';
+    hideSearchbarDropdown();
+  }
 }
 
-if (trackPanelToggle && trackPanel && trackPanelChevron) {
-  trackPanelToggle.addEventListener('click', () => {
-    if (trackPanelToggle.disabled) return;
-    const open = trackPanel.classList.toggle('open');
-    trackPanelChevron.innerHTML = open ? '&#x25BC;' : '&#x25B2;';
-  });
-}
 
-// Show message if no folder uploaded
-function renderTrackDropdown() {
-  if (!trackDropdown) return;
-  trackDropdown.innerHTML = '';
-  updateTrackPanelToggleState();
+// --- Searchbar Dropdown Logic ---
+let filteredTracks = [];
+let searchbarSelectedIndex = -1;
+
+function renderSearchbarDropdown(filter = '') {
+  if (!searchbarDropdown) return;
+  searchbarDropdown.innerHTML = '';
   if (!importedFiles.length) {
     const emptyMsg = document.createElement('div');
-    emptyMsg.className = 'track-panel-empty';
+    emptyMsg.className = 'searchbar-dropdown-empty';
     emptyMsg.textContent = 'No folder uploaded yet.';
-    trackDropdown.appendChild(emptyMsg);
+    searchbarDropdown.appendChild(emptyMsg);
     return;
   }
-  importedFiles.forEach((track, idx) => {
+  filter = filter.trim().toLowerCase();
+  filteredTracks = importedFiles.filter(track =>
+    track.name.toLowerCase().includes(filter)
+  );
+  if (!filteredTracks.length) {
+    const emptyMsg = document.createElement('div');
+    emptyMsg.className = 'searchbar-dropdown-empty';
+    emptyMsg.textContent = 'No matching songs.';
+    searchbarDropdown.appendChild(emptyMsg);
+    return;
+  }
+  filteredTracks.forEach((track, idx) => {
     const item = document.createElement('div');
-    item.className = 'track-item' + (idx === currentTrackIndex ? ' selected' : '');
-    item.dataset.idx = idx;
+    let selectedClass = '';
+    // Highlight if this is the current track or keyboard selection
+    if (track.index === currentTrackIndex) selectedClass += ' selected';
+    if (idx === searchbarSelectedIndex) selectedClass += ' keyboard-selected';
+    item.className = 'searchbar-item' + selectedClass;
+    item.dataset.idx = track.index;
     // Album art placeholder
     const art = document.createElement('img');
     art.className = 'track-album-art';
-    art.src = track.albumArt || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" rx="7" fill="%23232b36"/><text x="50%" y="55%" text-anchor="middle" fill="%238fd6ff" font-size="16" font-family="Quicksand" dy=".3em">♪</text></svg>';
+    art.src = track.albumArt || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38"><rect width="38" height="38" rx="7" fill="%23232b36"/><text x="50%" y="55%" text-anchor="middle" fill="%238fd6ff" font-size="16" font-family="Quicksand" dy=".3em">\u266a</text></svg>';
     item.appendChild(art);
     // Info
     const info = document.createElement('div');
@@ -65,10 +84,67 @@ function renderTrackDropdown() {
     author.textContent = track.author || '';
     info.appendChild(author);
     item.appendChild(info);
-    item.onclick = () => selectTrack(idx);
-    trackDropdown.appendChild(item);
+    item.onclick = () => {
+      selectTrack(track.index);
+      hideSearchbarDropdown();
+    };
+    searchbarDropdown.appendChild(item);
   });
 }
+
+function showSearchbarDropdown() {
+  if (!searchbarDropdown) return;
+  searchbarDropdown.classList.add('open');
+}
+function hideSearchbarDropdown() {
+  if (!searchbarDropdown) return;
+  searchbarDropdown.classList.remove('open');
+  searchbarSelectedIndex = -1;
+}
+
+if (searchbar) {
+  searchbar.addEventListener('focus', () => {
+    if (searchbar.disabled) return;
+    renderSearchbarDropdown(searchbar.value);
+    showSearchbarDropdown();
+  });
+  searchbar.addEventListener('input', (e) => {
+    renderSearchbarDropdown(e.target.value);
+    showSearchbarDropdown();
+    searchbarSelectedIndex = -1;
+  });
+  searchbar.addEventListener('keydown', (e) => {
+    if (!searchbarDropdown.classList.contains('open')) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (filteredTracks.length) {
+        searchbarSelectedIndex = (searchbarSelectedIndex + 1) % filteredTracks.length;
+        renderSearchbarDropdown(searchbar.value);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (filteredTracks.length) {
+        searchbarSelectedIndex = (searchbarSelectedIndex - 1 + filteredTracks.length) % filteredTracks.length;
+        renderSearchbarDropdown(searchbar.value);
+      }
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (filteredTracks.length && searchbarSelectedIndex >= 0) {
+        selectTrack(filteredTracks[searchbarSelectedIndex].index);
+        hideSearchbarDropdown();
+        searchbar.blur();
+      }
+    } else if (e.key === 'Escape') {
+      hideSearchbarDropdown();
+      searchbar.blur();
+    }
+  });
+  searchbar.addEventListener('blur', () => {
+    setTimeout(hideSearchbarDropdown, 120);
+  });
+}
+
+// Show message if no folder uploaded
 // Playback mode logic
 // ...existing code...
 // 0: play all, 1: loop all, 2: loop one
@@ -156,8 +232,8 @@ function renderTrackDropdown() {
 function selectTrack(idx) {
   if (idx < 0 || idx >= importedFiles.length) return;
   currentTrackIndex = idx;
-  renderTrackDropdown();
   loadTrack(idx);
+  updateExportBtnState();
 }
 
 function loadTrack(idx) {
@@ -199,13 +275,11 @@ if (fileInput) {
     }));
     if (importedFiles.length > 0) {
       currentTrackIndex = 0;
-      renderTrackDropdown();
       loadTrack(0);
     } else {
-      renderTrackDropdown();
       if (fileNameSpan) fileNameSpan.textContent = 'No folder chosen';
     }
-    updateTrackPanelToggleState();
+    updateSearchbarState();
   });
 }
 
@@ -245,12 +319,13 @@ if (exportBtn) {
 // Call updateExportBtnState on relevant events
 document.addEventListener('DOMContentLoaded', function() {
   updateExportBtnState();
-  updateTrackPanelToggleState();
+  updateSearchbarState();
 });
 if (fileInput) {
   fileInput.addEventListener('change', function (e) {
     // ...existing code...
     updateExportBtnState();
+    updateSearchbarState();
   });
 }
 // If you have a selectTrack function, call updateExportBtnState there as well

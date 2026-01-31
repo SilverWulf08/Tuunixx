@@ -11,6 +11,10 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div class="searchbar-wrapper">
+    <input type="text" class="searchbar" id="searchbar" placeholder="Search for a song..." disabled />
+    <div class="searchbar-dropdown" id="searchbar-dropdown"></div>
+  </div>
   <div class="top-bar">
     <button class="export-btn" id="export-btn">Export MP3</button>
     <div class="topbar-track-slider">
@@ -24,23 +28,13 @@
       <label>Volume
         <input type="range" min="0" max="1" value="1" step="0.01" class="volume-slider" id="volume-slider">
       </label>
-      <button class="track-panel-toggle" id="track-panel-toggle" title="Show/Hide track list" disabled>
-        <span id="track-panel-chevron">&#x25B2;</span>
-      </button>
     </div>
   </div>
   <div class="center-stage">
     <canvas id="visualizer"></canvas>
     <div class="container">
       <h1>Tuunixx</h1>
-      <!-- Track panel will be a sliding panel at the bottom, toggled by a chevron button -->
-      <div class="track-panel" id="track-panel">
-        <div class="track-panel-inner">
-          <div class="track-dropdown" id="track-dropdown">
-            <!-- Tracks will be dynamically inserted here -->
-          </div>
-        </div>
-      </div>
+      <!-- Searchbar and dropdown now at top -->
       <div class="lp-player">
         <div class="lp-record" id="lp-record" tabindex="0" aria-label="Play/Pause">
           <div class="lp-rotator" id="lp-rotator">
