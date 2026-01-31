@@ -19,8 +19,14 @@ const fileNameSpan = document.getElementById('file-name');
 const lpRotator = document.getElementById('lp-rotator');
 const exportBtn = document.getElementById('export-btn');
 
+function updateTrackPanelToggleState() {
+  if (!trackPanelToggle) return;
+  trackPanelToggle.disabled = !(importedFiles && importedFiles.length > 0);
+}
+
 if (trackPanelToggle && trackPanel && trackPanelChevron) {
   trackPanelToggle.addEventListener('click', () => {
+    if (trackPanelToggle.disabled) return;
     const open = trackPanel.classList.toggle('open');
     trackPanelChevron.innerHTML = open ? '&#x25BC;' : '&#x25B2;';
   });
@@ -30,6 +36,7 @@ if (trackPanelToggle && trackPanel && trackPanelChevron) {
 function renderTrackDropdown() {
   if (!trackDropdown) return;
   trackDropdown.innerHTML = '';
+  updateTrackPanelToggleState();
   if (!importedFiles.length) {
     const emptyMsg = document.createElement('div');
     emptyMsg.className = 'track-panel-empty';
@@ -44,7 +51,7 @@ function renderTrackDropdown() {
     // Album art placeholder
     const art = document.createElement('img');
     art.className = 'track-album-art';
-    art.src = track.albumArt || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38"><rect width="38" height="38" rx="7" fill="%23232b36"/><text x="50%" y="55%" text-anchor="middle" fill="%238fd6ff" font-size="16" font-family="Quicksand" dy=".3em">♪</text></svg>';
+    art.src = track.albumArt || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="38" height="38" rx="7" fill="%23232b36"/><text x="50%" y="55%" text-anchor="middle" fill="%238fd6ff" font-size="16" font-family="Quicksand" dy=".3em">♪</text></svg>';
     item.appendChild(art);
     // Info
     const info = document.createElement('div');
@@ -198,20 +205,21 @@ if (fileInput) {
       renderTrackDropdown();
       if (fileNameSpan) fileNameSpan.textContent = 'No folder chosen';
     }
+    updateTrackPanelToggleState();
   });
+}
+
+function updateExportBtnState() {
+  if (!exportBtn) return;
+  const hasTrack = importedFiles.length > 0 && importedFiles[currentTrackIndex];
+  exportBtn.disabled = !hasTrack;
 }
 
 if (exportBtn) {
   exportBtn.addEventListener('click', function () {
-    if (!importedFiles.length) {
-      alert('Please import a folder with MP3 files first.');
-      return;
-    }
+    if (exportBtn.disabled) return;
     const track = importedFiles[currentTrackIndex];
-    if (!track) {
-      alert('No track selected.');
-      return;
-    }
+    if (!track) return;
     // In the future, apply audio modifications here before exporting
     const originalName = track.name;
     const dotIndex = originalName.lastIndexOf('.');
@@ -233,6 +241,19 @@ if (exportBtn) {
     }, 100);
   });
 }
+
+// Call updateExportBtnState on relevant events
+document.addEventListener('DOMContentLoaded', function() {
+  updateExportBtnState();
+  updateTrackPanelToggleState();
+});
+if (fileInput) {
+  fileInput.addEventListener('change', function (e) {
+    // ...existing code...
+    updateExportBtnState();
+  });
+}
+// If you have a selectTrack function, call updateExportBtnState there as well
 // ...existing code...
 
 let noteInterval = null;
@@ -240,6 +261,8 @@ const noteEmojis = ['\u266B', '\u266A', '\u266C', '\u2669'];
 
 // Web Audio API setup
 let audioCtx, analyser, sourceNode, dataArray, waveformArray, animationId, visualizerId;
+let eqFilters = [];
+let audioSetupDone = false;
 let lastFlash = 0, lastBass = 0, bassPeak = 0, flashLevel = 0;
 const visualizer = document.getElementById('visualizer');
 
@@ -247,31 +270,24 @@ function setupAudioAnalyzer() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
+    analyser.fftSize = 1024; // Lowered for perf
     dataArray = new Uint8Array(analyser.frequencyBinCount);
     waveformArray = new Uint8Array(analyser.fftSize);
   }
-  if (sourceNode) {
-    sourceNode.disconnect();
-  }
-  sourceNode = audioCtx.createMediaElementSource(audioPlayer);
-
-  // Create EQ filters if not already
-  const eqBands = [
-    { freq: 60, type: 'lowshelf' },
-    { freq: 170, type: 'peaking' },
-    { freq: 310, type: 'peaking' },
-    { freq: 600, type: 'peaking' },
-    { freq: 1000, type: 'peaking' },
-    { freq: 3000, type: 'peaking' },
-    { freq: 6000, type: 'peaking' },
-    { freq: 12000, type: 'peaking' },
-    { freq: 14000, type: 'peaking' },
-    { freq: 16000, type: 'highshelf' }
-  ];
-  let eqFilters = [];
-
-  if (!eqFilters.length) {
+  if (!audioSetupDone) {
+    sourceNode = audioCtx.createMediaElementSource(audioPlayer);
+    const eqBands = [
+      { freq: 60, type: 'lowshelf' },
+      { freq: 170, type: 'peaking' },
+      { freq: 310, type: 'peaking' },
+      { freq: 600, type: 'peaking' },
+      { freq: 1000, type: 'peaking' },
+      { freq: 3000, type: 'peaking' },
+      { freq: 6000, type: 'peaking' },
+      { freq: 12000, type: 'peaking' },
+      { freq: 14000, type: 'peaking' },
+      { freq: 16000, type: 'highshelf' }
+    ];
     eqFilters = eqBands.map(band => {
       const filter = audioCtx.createBiquadFilter();
       filter.type = band.type;
@@ -280,15 +296,16 @@ function setupAudioAnalyzer() {
       filter.gain.value = 0;
       return filter;
     });
+    // Connect filters in series
+    let prev = sourceNode;
+    eqFilters.forEach(filter => {
+      prev.connect(filter);
+      prev = filter;
+    });
+    prev.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    audioSetupDone = true;
   }
-  // Connect filters in series
-  let prev = sourceNode;
-  eqFilters.forEach(filter => {
-    prev.connect(filter);
-    prev = filter;
-  });
-  prev.connect(analyser);
-  analyser.connect(audioCtx.destination);
 }
 
 function animateFlash() {
@@ -317,34 +334,50 @@ function animateFlash() {
   animationId = requestAnimationFrame(animateFlash);
 }
 
+// Offscreen canvas for performance
+const offscreenCanvas = document.createElement('canvas');
+let offCtx = offscreenCanvas.getContext('2d');
+
 function drawVisualizer() {
   if (!analyser || !visualizer) return;
-  analyser.getByteTimeDomainData(waveformArray);
-  const ctx = visualizer.getContext('2d');
-  // Only resize if window size changed
-  if (visualizer.width !== window.innerWidth || visualizer.height !== window.innerHeight) {
-    visualizer.width = window.innerWidth;
-    visualizer.height = window.innerHeight;
+  // Only draw if audio is playing
+  if (audioPlayer.paused || audioPlayer.ended) {
+    visualizerId = requestAnimationFrame(drawVisualizer);
+    return;
   }
-  const width = visualizer.width;
-  const height = visualizer.height;
-  ctx.clearRect(0, 0, width, height);
-  // Draw glowing waveform
-  ctx.save();
-  ctx.beginPath();
-  for (let i = 0; i < waveformArray.length; i += 6) { // much lower resolution for perf
+  analyser.getByteTimeDomainData(waveformArray);
+  // Resize offscreen and onscreen canvas if needed
+  const targetWidth = window.innerWidth;
+  const targetHeight = window.innerHeight - 56;
+  if (offscreenCanvas.width !== targetWidth || offscreenCanvas.height !== targetHeight) {
+    offscreenCanvas.width = targetWidth;
+    offscreenCanvas.height = targetHeight;
+    visualizer.width = targetWidth;
+    visualizer.height = targetHeight;
+    offCtx = offscreenCanvas.getContext('2d');
+  }
+  const width = offscreenCanvas.width;
+  const height = offscreenCanvas.height;
+  offCtx.clearRect(0, 0, width, height);
+  // Draw waveform
+  offCtx.save();
+  offCtx.beginPath();
+  for (let i = 0; i < waveformArray.length; i += 4) {
     const v = (waveformArray[i] - 128) / 128;
     const x = (i / (waveformArray.length - 1)) * width;
-    const y = height / 2 - v * height * 0.48;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    const y = height / 2 - v * (height / 2 - 4);
+    if (i === 0) offCtx.moveTo(x, y);
+    else offCtx.lineTo(x, y);
   }
-  ctx.strokeStyle = 'rgba(120,220,255,0.85)';
-  ctx.lineWidth = 0.8; // thinner for performance
-  // Remove shadow for max performance
-  ctx.stroke();
-  ctx.restore();
-  // (No fill under the wave, only the glowing line)
+  offCtx.strokeStyle = 'rgba(120,220,255,0.95)';
+  offCtx.lineWidth = 1.1;
+  // No shadowBlur for perf
+  offCtx.stroke();
+  offCtx.restore();
+  // Blit to visible canvas
+  const ctx = visualizer.getContext('2d');
+  ctx.clearRect(0, 0, visualizer.width, visualizer.height);
+  ctx.drawImage(offscreenCanvas, 0, 0);
   visualizerId = requestAnimationFrame(drawVisualizer);
 }
 
