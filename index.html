@@ -1,62 +1,202 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tuunixx</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tuunixx</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="searchbar-wrapper">
-    <input type="text" class="searchbar" id="searchbar" placeholder="Search for a song..." disabled />
-    <div class="searchbar-dropdown" id="searchbar-dropdown"></div>
-  </div>
-  <div class="top-bar">
-    <button class="export-btn" id="export-btn">Export MP3</button>
-    <div class="topbar-track-slider">
-      <button class="playback-mode-toggle" id="playback-mode-toggle" title="Change playback mode">
-        <span id="playback-mode-icon">&#9654;&#9654;</span>
-      </button>
-      <input type="range" min="0" max="100" value="0" class="audio-progress-slider" id="audio-progress-slider">
-      <span class="audio-time" id="audio-current">0:00</span> / <span class="audio-time" id="audio-duration">0:00</span>
-    </div>
-    <div class="topbar-volume-slider">
-      <label>Volume
-        <input type="range" min="0" max="1" value="1" step="0.01" class="volume-slider" id="volume-slider">
-      </label>
-    </div>
-  </div>
-  <div class="center-stage">
+    <!-- Background Canvas for Visualization -->
     <canvas id="visualizer"></canvas>
-    <div class="container">
-      <h1>Tuunixx</h1>
-      <!-- Searchbar and dropdown now at top -->
-      <div class="lp-player">
-        <div class="lp-record" id="lp-record" tabindex="0" aria-label="Play/Pause">
-          <div class="lp-rotator" id="lp-rotator">
-            <div class="lp-grooves"></div>
-            <div class="lp-label"></div>
-            <div class="lp-spindle"></div>
-            <span id="lp-play-icon" class="lp-play-icon">&#9654;</span>
-          </div>
+    
+    <!-- Mobile Header (visible only on mobile) -->
+    <header class="mobile-header">
+        <div class="mobile-logo">
+            <i class="fas fa-compact-disc"></i>
+            <span>Tuunixx</span>
         </div>
-        <div class="music-notes" id="music-notes"></div>
-        <div class="file-upload-wrapper">
-          <label for="file-input" class="file-label">
-            <span class="file-btn"><span class="file-btn-text">Browse<br>Folder</span></span>
-            <span class="file-name" id="file-name">No folder chosen</span>
-            <input type="file" id="file-input" accept="audio/mp3" webkitdirectory directory multiple />
-          </label>
+        <div class="mobile-actions">
+            <input type="file" id="mobileFolderInput" webkitdirectory multiple accept="audio/*" hidden>
+            <button class="mobile-upload-btn" id="mobileUploadBtn">
+                <i class="fas fa-folder-open"></i>
+            </button>
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
-        <!-- Sliders moved to top bar -->
-        <audio id="audio-player" style="display:none;"></audio>
-      </div>
+    </header>
+    
+    <!-- Mobile Dropdown Menu -->
+    <div class="mobile-dropdown" id="mobileDropdown">
+        <div class="mobile-dropdown-content">
+            <!-- Playlist in dropdown -->
+            <div class="mobile-playlist-section">
+                <h3><i class="fas fa-list"></i> Playlist</h3>
+                <div class="mobile-playlist" id="mobilePlaylist">
+                    <div class="playlist-empty">
+                        <i class="fas fa-music"></i>
+                        <p>No tracks loaded</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Effects in dropdown -->
+            <div class="mobile-effects-section">
+                <h3><i class="fas fa-sliders-h"></i> Effects</h3>
+                <div class="mobile-effects-controls">
+                    <div class="effect-slider">
+                        <label>Bass</label>
+                        <input type="range" id="mobileBass" min="-12" max="12" value="0" step="0.5">
+                        <span class="effect-value" id="mobileBassValue">0 dB</span>
+                    </div>
+                    <div class="effect-slider">
+                        <label>Mid</label>
+                        <input type="range" id="mobileMid" min="-12" max="12" value="0" step="0.5">
+                        <span class="effect-value" id="mobileMidValue">0 dB</span>
+                    </div>
+                    <div class="effect-slider">
+                        <label>Treble</label>
+                        <input type="range" id="mobileTreble" min="-12" max="12" value="0" step="0.5">
+                        <span class="effect-value" id="mobileTrebleValue">0 dB</span>
+                    </div>
+                    <div class="effect-slider">
+                        <label>Gain</label>
+                        <input type="range" id="mobileGain" min="0" max="2" value="1" step="0.1">
+                        <span class="effect-value" id="mobileGainValue">100%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  <script src="script.js"></script>
+    
+    <!-- Main App Container -->
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fas fa-compact-disc"></i>
+                <span>Tuunixx</span>
+            </div>
+            
+            <!-- Upload Area -->
+            <div class="upload-section">
+                <input type="file" id="folderInput" webkitdirectory multiple accept="audio/*" hidden>
+                <button class="upload-btn" id="uploadBtn">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Load Album</span>
+                </button>
+            </div>
+            
+            <!-- Playlist -->
+            <div class="playlist-section">
+                <h3><i class="fas fa-list"></i> Playlist</h3>
+                <div class="playlist" id="playlist">
+                    <div class="playlist-empty">
+                        <i class="fas fa-music"></i>
+                        <p>No tracks loaded</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Effects Panel -->
+            <div class="effects-section">
+                <h3><i class="fas fa-sliders-h"></i> Effects</h3>
+                <div class="effects-grid">
+                    <div class="effect-control">
+                        <label><i class="fas fa-volume-high"></i> Gain</label>
+                        <input type="range" id="gainSlider" min="0" max="200" value="100">
+                        <span class="effect-value" id="gainValue">100%</span>
+                    </div>
+                    <div class="effect-control">
+                        <label><i class="fas fa-drum"></i> Bass</label>
+                        <input type="range" id="bassSlider" min="-12" max="12" value="0">
+                        <span class="effect-value" id="bassValue">0 dB</span>
+                    </div>
+                    <div class="effect-control">
+                        <label><i class="fas fa-guitar"></i> Mid</label>
+                        <input type="range" id="midSlider" min="-12" max="12" value="0">
+                        <span class="effect-value" id="midValue">0 dB</span>
+                    </div>
+                    <div class="effect-control">
+                        <label><i class="fas fa-bell"></i> Treble</label>
+                        <input type="range" id="trebleSlider" min="-12" max="12" value="0">
+                        <span class="effect-value" id="trebleValue">0 dB</span>
+                    </div>
+                </div>
+                <button class="reset-effects-btn" id="resetEffects">
+                    <i class="fas fa-undo"></i> Reset Effects
+                </button>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Now Playing Section -->
+            <div class="now-playing">
+                <div class="album-art" id="albumArt">
+                    <i class="fas fa-music"></i>
+                </div>
+                <div class="track-info">
+                    <h1 class="track-title" id="trackTitle">No Track Playing</h1>
+                    <p class="track-artist" id="trackArtist">Load an album to start</p>
+                </div>
+            </div>
+            
+            <!-- Progress Section -->
+            <div class="progress-section">
+                <span class="time" id="currentTime">0:00</span>
+                <div class="progress-bar-container">
+                    <input type="range" id="progressSlider" min="0" max="100" value="0" step="0.1">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                <span class="time" id="duration">0:00</span>
+            </div>
+            
+            <!-- Controls Section -->
+            <div class="controls-section">
+                <div class="secondary-controls left">
+                    <button class="control-btn" id="shuffleBtn" title="Shuffle">
+                        <i class="fas fa-shuffle"></i>
+                    </button>
+                    <button class="control-btn" id="loopBtn" title="Loop Mode">
+                        <i class="fas fa-repeat"></i>
+                    </button>
+                </div>
+                
+                <div class="main-controls">
+                    <button class="control-btn" id="prevBtn" title="Previous">
+                        <i class="fas fa-backward-step"></i>
+                    </button>
+                    <button class="control-btn play-btn" id="playBtn" title="Play">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <button class="control-btn" id="nextBtn" title="Next">
+                        <i class="fas fa-forward-step"></i>
+                    </button>
+                </div>
+                
+                <div class="secondary-controls right">
+                    <button class="control-btn" id="muteBtn" title="Mute">
+                        <i class="fas fa-volume-high"></i>
+                    </button>
+                    <div class="volume-slider-container">
+                        <input type="range" id="volumeSlider" min="0" max="100" value="80">
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Hidden Audio Element -->
+    <audio id="audio" preload="auto"></audio>
+    
+    <script src="script.js"></script>
 </body>
 </html>
